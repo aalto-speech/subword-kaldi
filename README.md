@@ -18,5 +18,8 @@ The standard way to use this scripts is:
 
 For the other scripts (l/r/lr-marked ) the number of extra disambiguation symbols can be reduced to 1
 
+## Limitiations
 
+ - The lexicon files are not updated in the lang directory, so lexicon-based alignment of lattices will not work (fix in progress)
+ - At this moment all pronunciations will have probability 1 (which is common anyway for grapheme-based systems). If custom probabilities are required the `local/make_lfst_*.py` files should be updated to include them.
 
