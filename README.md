@@ -18,8 +18,16 @@ The standard way to use this scripts is:
 
 For the other scripts (l/r/lr-marked ) the number of extra disambiguation symbols can be reduced to 1
 
+## What type of marking style is the best?
+
+This unfortunately depends on your language and dataset. We have seen different optimal values for different datasets and languages.
+
 ## Limitiations
 
  - The lexicon files are not updated in the lang directory, so lexicon-based alignment of lattices will not work (fix in progress)
  - At this moment all pronunciations will have probability 1 (which is common anyway for grapheme-based systems). If custom probabilities are required the `local/make_lfst_*.py` files should be updated to include them.
 
+
+## Help
+
+Feel free to make an issue or send me an email on peter.smit@aalto.fi if you have trouble getting these scripts to work.
