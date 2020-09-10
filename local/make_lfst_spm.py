@@ -32,6 +32,8 @@ parser.add_argument("disambig_sil",
         help = "Disambiguation symbol for silence")
 parser.add_argument("disambig_infix", 
         help = "Disambiguation symbol for infix")
+parser.add_argument("--lexicon-file", default="-",
+        help = "Path to lexicon file. If not given, read from stdin instead.")
 parser.add_argument("--char-phone-map", 
         help = "Path to file mapping between characters and phones. "
         "File should contain two columns: char, mapped phone. "
@@ -59,8 +61,9 @@ if args.char_phone_map is not None:
 
 # A couple of printing helpers
 def print_edge(from_state, to_state, consume, output, cost = 0.):
-    print("{from}\t{to}\t{consume}\t{output}\t{cost}".format(from=from_state, 
-        to=to, consume=consume, output=output, cost=cost))
+    print("{from_state}\t{to_state}\t{consume}\t{output}\t{cost}".format(
+        from_state=from_state, to_state=to_state, consume=consume, 
+        output=output, cost=cost))
 def print_end(state):
     print("{state}".format(state=state))
 
@@ -104,8 +107,8 @@ def handle_one_connection(from_state, to_state, word, disambig, starts, ends):
 
     # Create the states:
     froms = []; tos = []
-    froms.append[from_state]
-    for _ in len(to_consume) - 1:
+    froms.append(from_state)
+    for _ in range(len(to_consume) - 1):
         tos.append(NEXT_STATE)
         froms.append(NEXT_STATE)
         NEXT_STATE += 1
@@ -129,9 +132,8 @@ print_edge(SIL_BRIDGE, AFTER_SPACE, args.disambig_sil, EMPTY)
 print_edge(INSIDE_WORD, IN_WORD_BRIDGE, args.disambig_infix, EMPTY)
 
 # Iterate on stdin
-for line in fileinput.input():
+for line in fileinput.input(args.lexicon_file):
     word, prob, *phones = line.strip().split()
-    phones = phones.split()
 
     # First extract the disambig phones from the end:
     disambig = []
@@ -166,7 +168,7 @@ for line in fileinput.input():
         # Or can appear as prefix:
         handle_one_connection(AFTER_CHAR, INSIDE_WORD, 
                 word, disambig, 
-                starts = True, ends = FALSE)
+                starts = True, ends = False)
     elif last_char == SPACE:  # sub_word_
         # Can appear as complete:
         handle_one_connection(AFTER_SPACE, AFTER_SPACE, 
