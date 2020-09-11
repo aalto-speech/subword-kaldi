@@ -118,8 +118,8 @@ def handle_one_connection(from_state, to_state, word, disambig, starts, ends):
     for inp, label, out, fr, to in zip(to_consume, labels, to_output, froms, tos):
         if inp == SPACE:
             # Two paths for the optional silence
-            print_edge(fr, to, SILENCE, SPACE, HALF)
-            print_edge(fr, to, args.disambig_no_sil, SPACE, HALF)
+            print_edge(fr, to, SILENCE, out, HALF)
+            print_edge(fr, to, args.disambig_no_sil, out, HALF)
         else:
             # Do the mapping here (sorry it's a little ugly)
             mapped = mapping[inp]
