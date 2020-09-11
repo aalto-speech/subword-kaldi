@@ -6,6 +6,7 @@ import fileinput
 import collections
 
 SPACE = '▁'
+PLACEHOLDER = "(S)"
 CHAR = 'justnotaspace'  # can be anything but not the SPACE
 EMPTY = "<eps>"
 SILENCE = "SIL"
