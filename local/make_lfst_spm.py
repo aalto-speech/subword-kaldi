@@ -26,6 +26,9 @@ NEXT_STATE = 5
 ##  even though sentencepiece does. The reason is that when transcribing
 ##  speech, the number of spaces is by convention always just one.
 
+## TODO: Support multiple pronunciations for a single word.
+##  For grapheme-models, this is not a problem.
+
 parser = argparse.ArgumentParser()
 parser.add_argument("disambig_no_sil", 
         help = "Disambiguation symbol for no silence")
@@ -33,32 +36,20 @@ parser.add_argument("disambig_sil",
         help = "Disambiguation symbol for silence")
 parser.add_argument("disambig_infix", 
         help = "Disambiguation symbol for infix")
+parser.add_argument("placeholder_lexicon",
+        help = "Path to lexicon file with a placeholder symbol for each space.")
 parser.add_argument("--lexicon-file", default="-",
-        help = "Path to lexicon file. If not given, read from stdin instead.")
-parser.add_argument("--char-phone-map", 
-        help = "Path to file mapping between characters and phones. "
-        "File should contain two columns: char, mapped phone. "
-        "Note that if a phone is not found in the mapping, it will be "
-        "mapped to itself. "
-        "This script only supports character based lexica, "
-        "but sometimes e.g. utf-8 characters are mapped to ASCII symbols.")
+        help = "Path to Kaldi-created lexicon_disambig.txt file. "
+        "Used to extract the normal disambiguation symbols. If not given, read from stdin instead.")
 args = parser.parse_args()
 
-# Handle the mapping:
-class UnityDict(collections.UserDict):
-    # if queried with unknown key, returns key
-    def __getitem__(self, key):
-        if key in self.data:
-            return self.data[key]
-        else:
-            return key
-mapping = UnityDict()
-if args.char_phone_map is not None:
-    # Load file here
-    with open(args.char_phone_map) as fi:
-        for line in fi:
-            phone, mapped = line.strip().split()
-            mapping[phone] = mapped
+
+# Read the placeholder lexicon file:
+placeholder_lexicon = {}
+with open(args.placeholder_lexicon, encoding = "utf-8") as fi:
+    for line in fi:
+        word, *pronunciation = line.strip().split()
+        placeholder_lexicon[word] = pronunciation
 
 # A couple of printing helpers
 def print_edge(from_state, to_state, consume, output, cost = 0.):
@@ -76,26 +67,27 @@ def handle_one_connection(from_state, to_state, word, disambig, starts, ends):
     word or ends at end of word (needed for proper _B and _E handling)
     """
     global NEXT_STATE
+    pronunciation = placeholder_lexicon[word]  # Will error out if the lexica don't match.
     # First, figure out the phone placement labels (_B, _E, _I, _S)
     labels = []
-    before = SPACE if starts else CHAR
-    after = SPACE if ends else CHAR
-    groups = zip([before,] + list(word[0:-1]),
-        list(word),
-        list(word[1:]) + [after,])
+    before = PLACEHOLDER if starts else CHAR
+    after = PLACEHOLDER if ends else CHAR
+    groups = zip([before,] + pronunciation[0:-1],
+        pronunciation,
+        pronunciation[1:] + [after,])
     for left, curr, right in groups:
-        if curr == SPACE:
+        if curr == PLACEHOLDER:
             labels.append("")
-        elif left == SPACE and right == SPACE:
+        elif left == PLACEHOLDER and right == PLACEHOLDER:
             labels.append("_S")
-        elif left == SPACE:
+        elif left == PLACEHOLDER:
             labels.append("_B")
-        elif right == SPACE:
+        elif right == PLACEHOLDER:
             labels.append("_E")
         else:
             labels.append("_I")
     # Disambig symbols go in the end, and they have no label
-    to_consume = list(word) + list(disambig)
+    to_consume = pronunciation + list(disambig)
     for disambig_symbol in disambig:
         labels.append("")
     # So there is now a label for each char and disambig symbol
@@ -117,14 +109,12 @@ def handle_one_connection(from_state, to_state, word, disambig, starts, ends):
 
     # Finally, print out edges:
     for inp, label, out, fr, to in zip(to_consume, labels, to_output, froms, tos):
-        if inp == SPACE:
+        if inp == PLACEHOLDER:
             # Two paths for the optional silence
             print_edge(fr, to, SILENCE, out, HALF)
             print_edge(fr, to, args.disambig_no_sil, out, HALF)
         else:
-            # Do the mapping here (sorry it's a little ugly)
-            mapped = mapping[inp]
-            print_edge(fr, to, mapped + label, out)
+            print_edge(fr, to, inp + label, out)
 
 # First, establish the basic connections (optional silence, in word disambig)
 print_edge(AFTER_CHAR, AFTER_SPACE, args.disambig_no_sil, SPACE, HALF)
