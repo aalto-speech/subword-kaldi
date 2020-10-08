@@ -123,7 +123,7 @@ print_edge(SIL_BRIDGE, AFTER_SPACE, args.disambig_sil, EMPTY)
 print_edge(INSIDE_WORD, IN_WORD_BRIDGE, args.disambig_infix, EMPTY)
 
 # Iterate on stdin
-for line in fileinput.input(args.lexicon_file):
+for line in fileinput.input(args.lexicon_file,openhook=fileinput.hook_encoded("utf-8")):
     word, prob, *phones = line.strip().split()
 
     # First extract the disambig phones from the end:

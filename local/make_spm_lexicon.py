@@ -74,4 +74,4 @@ for unit in units:
         else:
             build_part += char
     pronunciation.extend(part_lexicon[build_part])
-    print(unit, " ".join(pronunciation))
+    print(f"{unit}\t{' '.join(pronunciation)}")
