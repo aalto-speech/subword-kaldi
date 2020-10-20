@@ -19,8 +19,10 @@ AFTER_SPACE = 2  # Word has ended, and we have seen a space.
 # Inside word states:
 INSIDE_WORD = 3
 IN_WORD_BRIDGE = 4
+# Final state, allowing to end with optional silence:
+LAST_SILENCE = 5
 # The next free state:
-NEXT_STATE = 5
+NEXT_STATE = 6
 
 ## NOTE: We will not support multiple consecutive space characters,
 ##  even though sentencepiece does. The reason is that when transcribing
@@ -36,6 +38,10 @@ parser.add_argument("disambig_sil",
         help = "Disambiguation symbol for silence")
 parser.add_argument("disambig_infix", 
         help = "Disambiguation symbol for infix")
+parser.add_argument("disambig_inpiece_no_sil", 
+        help = "Disambiguation symbol for in-subword space consuming no silence")
+parser.add_argument("disambig_inpiece_sil", 
+        help = "Disambiguation symbol for in-subword silence")
 parser.add_argument("placeholder_lexicon",
         help = "Path to lexicon file with a placeholder symbol for each space.")
 parser.add_argument("--lexicon-file", default="-",
@@ -111,8 +117,13 @@ def handle_one_connection(from_state, to_state, word, disambig, starts, ends):
     for inp, label, out, fr, to in zip(to_consume, labels, to_output, froms, tos):
         if inp == PLACEHOLDER:
             # Two paths for the optional silence
-            print_edge(fr, to, SILENCE, out, HALF)
-            print_edge(fr, to, args.disambig_no_sil, out, HALF)
+            midstate = NEXT_STATE
+            NEXT_STATE += 1
+            # 1. sil path:
+            print_edge(fr, midstate, SILENCE, out, HALF)
+            print_edge(midstate, to, args.disambig_inpiece_sil, EMPTY)
+            # 2. no sil path:
+            print_edge(fr, to, args.disambig_inpiece_no_sil, out, HALF)
         else:
             print_edge(fr, to, inp + label, out)
 
@@ -191,3 +202,8 @@ for line in fileinput.input(args.lexicon_file,openhook=fileinput.hook_encoded("u
 # Finally, output the final states:
 print_end(AFTER_SPACE)
 print_end(AFTER_CHAR)
+
+# And allow one last traversal from after char to end with a silence:
+print_edge(AFTER_CHAR, LAST_SILENCE, SILENCE, EMPTY)
+print_end(LAST_SILENCE)
+
